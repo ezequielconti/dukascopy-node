@@ -109,38 +109,30 @@ interface TicksToOHLCInput {
   priceType: PriceType;
   startTs: number;
   volumes: boolean;
+  volumeMode?: 'size' | 'tick';        // new optional flag
 }
 
-function ticksToOHLC({ ticks, priceType, startTs, volumes }: TicksToOHLCInput): number[] {
+function ticksToOHLC({ ticks, priceType, startTs, volumes, volumeMode = 'size' }: TicksToOHLCInput): number[] {
   // timestamp, askPrice, bidPrice, askVolume, bidVolume
 
   const openPrice = priceType === 'ask' ? ticks[0][1] : ticks[0][2];
   const closePrice = priceType === 'ask' ? ticks[ticks.length - 1][1] : ticks[ticks.length - 1][2];
-  const initialVolume = priceType === 'ask' ? ticks[0][3] : ticks[0][4];
 
   const open = openPrice;
   let high = openPrice;
   let low = openPrice;
   const close = closePrice;
-  let volume = initialVolume;
+  let volume = 0;
 
-  for (let i = 1, n = ticks.length; i < n; i++) {
-    const [, askPrice, bidPrice, askVolume, bidVolume] = ticks[i];
+  for (let i = 0; i < ticks.length; i++) {
+    const [, askPrice, bidPrice, askVol, bidVol] = ticks[i];
+    const px = priceType === 'ask' ? askPrice : bidPrice;
 
-    const targetPrice = priceType === 'ask' ? askPrice : bidPrice;
-    const targetVolume = priceType === 'ask' ? askVolume : bidVolume;
+    if (px > high) high = px;
+    if (px < low) low = px;
 
-    if (targetPrice > high) {
-      high = targetPrice;
-    }
-
-    if (targetPrice < low) {
-      low = targetPrice;
-    }
-
-    if (targetVolume) {
-      volume += targetVolume;
-    }
+    volume += volumeMode === 'tick' ? 1
+      : (priceType === 'ask' ? askVol : bidVol);
   }
 
   const ohlc = [startTs, open, high, low, close];
@@ -156,12 +148,13 @@ function getMinuteOHLCfromTicks(
   ticks: number[][],
   priceType: PriceType,
   startTs: number,
-  volumes: boolean
+  volumes: boolean,
+  volumeMode?: 'size' | 'tick'
 ): number[][] {
   const ticksByMinute = breakdownByInterval(ticks, 60, d => d.getUTCMinutes());
   const ohlc = ticksByMinute.map((data, i) =>
     data.length > 0
-      ? ticksToOHLC({ ticks: data, priceType, startTs: startTs + i * 1000 * 60, volumes })
+      ? ticksToOHLC({ ticks: data, priceType, startTs: startTs + i * 1000 * 60, volumes, volumeMode })
       : []
   );
 
@@ -172,7 +165,8 @@ function getSecondOHLCfromTicks(
   ticks: number[][],
   priceType: PriceType,
   startTs: number,
-  volumes: boolean
+  volumes: boolean,
+  volumeMode?: 'size' | 'tick'
 ): number[][] {
   const ticksBySecond = breakdownByInterval(
     ticks,
@@ -181,7 +175,7 @@ function getSecondOHLCfromTicks(
   );
   const ohlc = ticksBySecond.map((data, i) =>
     data.length > 0
-      ? ticksToOHLC({ ticks: data, priceType, startTs: startTs + i * 1000, volumes })
+      ? ticksToOHLC({ ticks: data, priceType, startTs: startTs + i * 1000, volumes, volumeMode })
       : []
   );
 

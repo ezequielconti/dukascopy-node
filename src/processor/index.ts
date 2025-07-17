@@ -12,6 +12,7 @@ function processData({
   priceType,
   volumes,
   volumeUnits,
+  volumeMode,
   ignoreFlats
 }: ProcessDataInput): ProcessDataOutput {
   const result: ProcessDataOutput = [];
@@ -39,7 +40,8 @@ function processData({
       priceType,
       ignoreFlats,
       startTs: +startDate,
-      volumes
+      volumes,
+      volumeMode
     });
 
     for (let j = 0, m = aggregatedData.length; j < m; j++) {

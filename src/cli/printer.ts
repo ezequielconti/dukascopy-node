@@ -20,7 +20,7 @@ export function printHeader(
   adjustedStartDate: Date,
   adjustedEndDate: Date
 ): void {
-  const { instrument, timeframe, priceType, utcOffset, volumes, ignoreFlats, format } =
+  const { instrument, timeframe, priceType, utcOffset, volumes, volumeMode, ignoreFlats, format } =
     searchConfig;
 
   const dateTimeFormatOptions = getDateTimeFormatOptions(timeframe!);
@@ -42,6 +42,9 @@ export function printHeader(
     log('Price type:    ', chalk.bold(chalk.yellow(priceType)));
   }
   log('Volumes:       ', chalk.bold(chalk.yellow(volumes)));
+  if (volumes && volumeMode) {
+    log('Volume type:   ', chalk.bold(chalk.yellow(volumeMode)));
+  }
   log('UTC Offset:    ', chalk.bold(chalk.yellow(utcOffset)));
   log('Include flats: ', chalk.bold(chalk.yellow(!ignoreFlats)));
   log('Format:        ', chalk.bold(chalk.yellow(format)));

@@ -21,6 +21,7 @@ export interface ConfigBase {
   priceType?: PriceType;
   utcOffset?: number;
   volumes?: boolean;
+  volumeMode?: 'size' | 'tick';
   volumeUnits?: VolumeUnitType;
   ignoreFlats?: boolean;
   format?: FormatType;
@@ -41,6 +42,7 @@ export const defaultConfig: DefaultConfig = {
   priceType: Price.bid,
   utcOffset: 0,
   volumes: true,
+  volumeMode: 'size',
   volumeUnits: VolumeUnit.millions,
   ignoreFlats: true,
   format: Format.array,

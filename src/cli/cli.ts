@@ -22,6 +22,7 @@ import { version } from '../../package.json';
 import { BatchStreamWriter } from '../stream-writer';
 import { BufferObject } from '../buffer-fetcher/types';
 import { formatTimeDuration } from '../utils/formatTimeDuration';
+import { aggregate } from '../aggregator';
 
 dayjs.extend(utc);
 dayjs.extend(tz);
@@ -39,6 +40,7 @@ export async function run(argv: NodeJS.Process['argv']) {
     utcOffset,
     volumes,
     volumeUnits,
+    volumeMode,
     ignoreFlats,
     format,
     batchSize,
@@ -110,9 +112,8 @@ export async function run(argv: NodeJS.Process['argv']) {
 
       const fileName = customFileName
         ? `${customFileName}.${fileExtension}`
-        : `${instrument}-${timeframe}${
-            timeframe === 'tick' ? '' : '-' + priceType
-          }-${dateRangeStr}.${fileExtension}`;
+        : `${instrument}-${timeframe}${timeframe === 'tick' ? '' : '-' + priceType
+        }-${dateRangeStr}.${fileExtension}`;
       const folderPath = resolve(process.cwd(), dir);
       const filePath = resolve(folderPath, fileName);
 
@@ -120,7 +121,12 @@ export async function run(argv: NodeJS.Process['argv']) {
         silent ? printDivider() : printHeader(input, startDate, endDate);
       }
 
-      const urls = generateUrls({ instrument, timeframe, priceType, startDate, endDate });
+      // --- Force aggregate from tick if --tick-volume and OHLC timeframe requested ---
+      const isOhlcTimeframe = timeframe !== 'tick';
+      const shouldForceAggregateFromTick = volumeMode === 'tick' && isOhlcTimeframe;
+      const downloadTimeframe = shouldForceAggregateFromTick ? 'tick' : timeframe;
+
+      const urls = generateUrls({ instrument, timeframe: downloadTimeframe, priceType, startDate, endDate });
       debug(`${DEBUG_NAMESPACE}:urls`)(`Generated ${urls.length} urls`);
       debug(`${DEBUG_NAMESPACE}:urls`)(`%O`, urls);
 
@@ -146,9 +152,12 @@ export async function run(argv: NodeJS.Process['argv']) {
         printGeneral(`Download time: ${formatTimeDuration(downloadEndTs - downloadStartTs)}`);
       });
 
+      // Use the requested timeframe for output, even if we downloaded tick data
+      const outputTimeframe = timeframe;
+
       const batchStreamWriter = new BatchStreamWriter({
         fileWriteStream,
-        timeframe,
+        timeframe: outputTimeframe,
         format,
         isInline: inline,
         volumes,
@@ -185,30 +194,45 @@ export async function run(argv: NodeJS.Process['argv']) {
           }
 
           if (filteredBatchData.length) {
-            const processedBatch = processData({
+            let processedBatch = processData({
               instrument,
-              requestedTimeframe: timeframe,
+              requestedTimeframe: downloadTimeframe,
               bufferObjects: filteredBatchData,
               priceType,
               volumes,
               volumeUnits,
-              ignoreFlats
+              ignoreFlats,
+              volumeMode
             });
+
+            // If we forced aggregation from tick, aggregate to the requested OHLC timeframe
+            if (shouldForceAggregateFromTick) {
+              processedBatch = aggregate({
+                data: processedBatch,
+                fromTimeframe: 'tick',
+                toTimeframe: timeframe,
+                priceType,
+                ignoreFlats,
+                startTs: +startDate,
+                volumes,
+                volumeMode
+              });
+            }
 
             await batchStreamWriter.writeBatch(
               processedBatch,
               dateFormat
                 ? timeStamp => {
-                    if (dateFormat === 'iso') {
-                      return new Date(timeStamp).toISOString();
-                    }
-
-                    if (timeZone) {
-                      return dayjs(timeStamp).tz(timeZone).format(dateFormat);
-                    }
-
-                    return dayjs(timeStamp).utc().format(dateFormat);
+                  if (dateFormat === 'iso') {
+                    return new Date(timeStamp).toISOString();
                   }
+
+                  if (timeZone) {
+                    return dayjs(timeStamp).tz(timeZone).format(dateFormat);
+                  }
+
+                  return dayjs(timeStamp).utc().format(dateFormat);
+                }
                 : undefined
             );
           }

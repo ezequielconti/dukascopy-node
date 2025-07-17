@@ -64,10 +64,17 @@ const commanderSchema = program
     '-in, --inline',
     'Makes files smaller in size by removing new lines in the output (works only with json and array formats)',
     false
-  );
+  )
+  .option('-tv, --tick-volume', 'Use tick count instead of size-at-BBO', false);
 
 export function getConfigFromCliArgs(argv: NodeJS.Process['argv']) {
+  console.log('DEBUG: process.argv:', JSON.stringify(argv, null, 2));
   const options = commanderSchema.parse(argv).opts();
+
+  // Debug logging to see what options are parsed
+  console.log('DEBUG: Parsed options:', JSON.stringify(options, null, 2));
+  console.log('DEBUG: tickVolume value:', options.tickVolume);
+
   // Parse "now" date parameter and convert
   // it to current time.
   if (options.dateTo === now) {
@@ -84,6 +91,7 @@ export function getConfigFromCliArgs(argv: NodeJS.Process['argv']) {
     priceType: options.priceType,
     utcOffset: options.utcOffset,
     volumes: options.volumes,
+    volumeMode: options.tickVolume ? 'tick' : 'size',
     volumeUnits: options.volumeUnits,
     ignoreFlats: !options.flats,
     dir: options.directory,

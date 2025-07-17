@@ -57,6 +57,7 @@ export async function getHistoricalRates(config: Config): Promise<Output> {
     priceType,
     volumes,
     volumeUnits,
+    volumeMode,
     utcOffset,
     ignoreFlats,
     format,
@@ -90,12 +91,12 @@ export async function getHistoricalRates(config: Config): Promise<Output> {
 
   const onItemFetch: BufferFetcherInput['onItemFetch'] = process.env.DEBUG
     ? (url, buffer, isCacheHit) => {
-        debug(`${DEBUG_NAMESPACE}:fetcher`)(
-          url,
-          `| ${formatBytes(buffer.length)} |`,
-          `${isCacheHit ? 'cache' : 'network'}`
-        );
-      }
+      debug(`${DEBUG_NAMESPACE}:fetcher`)(
+        url,
+        `| ${formatBytes(buffer.length)} |`,
+        `${isCacheHit ? 'cache' : 'network'}`
+      );
+    }
     : undefined;
 
   const bufferFetcher = new BufferFetcher({
@@ -117,6 +118,7 @@ export async function getHistoricalRates(config: Config): Promise<Output> {
     priceType,
     volumes,
     volumeUnits,
+    volumeMode,
     ignoreFlats
   });
 

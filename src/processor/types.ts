@@ -11,6 +11,7 @@ export interface ProcessDataInput {
   priceType: PriceType;
   volumes: boolean;
   volumeUnits: VolumeUnitType;
+  volumeMode?: 'size' | 'tick';
   ignoreFlats: boolean;
 }
 
