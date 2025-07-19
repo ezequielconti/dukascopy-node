@@ -22,6 +22,7 @@ import { version } from '../../package.json';
 import { BatchStreamWriter } from '../stream-writer';
 import { BufferObject } from '../buffer-fetcher/types';
 import { formatTimeDuration } from '../utils/formatTimeDuration';
+import { aggregate } from '../aggregator';
 
 dayjs.extend(utc);
 dayjs.extend(tz);
@@ -55,7 +56,8 @@ export async function run(argv: NodeJS.Process['argv']) {
     pauseBetweenRetriesMs,
     fileName: customFileName,
     dateFormat,
-    timeZone
+    timeZone,
+    tickVolume
   } = input;
 
   if (isDebugActive) {
@@ -110,9 +112,8 @@ export async function run(argv: NodeJS.Process['argv']) {
 
       const fileName = customFileName
         ? `${customFileName}.${fileExtension}`
-        : `${instrument}-${timeframe}${
-            timeframe === 'tick' ? '' : '-' + priceType
-          }-${dateRangeStr}.${fileExtension}`;
+        : `${instrument}-${timeframe}${timeframe === 'tick' ? '' : '-' + priceType
+        }-${dateRangeStr}.${fileExtension}`;
       const folderPath = resolve(process.cwd(), dir);
       const filePath = resolve(folderPath, fileName);
 
@@ -120,7 +121,9 @@ export async function run(argv: NodeJS.Process['argv']) {
         silent ? printDivider() : printHeader(input, startDate, endDate);
       }
 
-      const urls = generateUrls({ instrument, timeframe, priceType, startDate, endDate });
+      // Determine the actual timeframe to download based on tickVolume setting
+      const downloadTimeframe = tickVolume && timeframe !== 'tick' ? 'tick' : timeframe;
+      const urls = generateUrls({ instrument, timeframe: downloadTimeframe, priceType, startDate, endDate });
       debug(`${DEBUG_NAMESPACE}:urls`)(`Generated ${urls.length} urls`);
       debug(`${DEBUG_NAMESPACE}:urls`)(`%O`, urls);
 
@@ -185,9 +188,9 @@ export async function run(argv: NodeJS.Process['argv']) {
           }
 
           if (filteredBatchData.length) {
-            const processedBatch = processData({
+            let processedBatch = processData({
               instrument,
-              requestedTimeframe: timeframe,
+              requestedTimeframe: downloadTimeframe,
               bufferObjects: filteredBatchData,
               priceType,
               volumes,
@@ -195,20 +198,34 @@ export async function run(argv: NodeJS.Process['argv']) {
               ignoreFlats
             });
 
+            // If tickVolume is enabled and we downloaded tick data, aggregate to the requested timeframe
+            if (tickVolume && downloadTimeframe === 'tick' && timeframe !== 'tick') {
+              processedBatch = aggregate({
+                data: processedBatch,
+                fromTimeframe: 'tick',
+                toTimeframe: timeframe,
+                priceType,
+                ignoreFlats,
+                startTs: +startDate,
+                volumes,
+                volumeMode: 'tick' // Use tick count as volume
+              });
+            }
+
             await batchStreamWriter.writeBatch(
               processedBatch,
               dateFormat
                 ? timeStamp => {
-                    if (dateFormat === 'iso') {
-                      return new Date(timeStamp).toISOString();
-                    }
-
-                    if (timeZone) {
-                      return dayjs(timeStamp).tz(timeZone).format(dateFormat);
-                    }
-
-                    return dayjs(timeStamp).utc().format(dateFormat);
+                  if (dateFormat === 'iso') {
+                    return new Date(timeStamp).toISOString();
                   }
+
+                  if (timeZone) {
+                    return dayjs(timeStamp).tz(timeZone).format(dateFormat);
+                  }
+
+                  return dayjs(timeStamp).utc().format(dateFormat);
+                }
                 : undefined
             );
           }

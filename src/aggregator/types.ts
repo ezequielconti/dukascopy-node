@@ -9,4 +9,5 @@ export type AggregateInput = {
   ignoreFlats: boolean;
   startTs: number;
   volumes: boolean;
+  volumeMode?: 'size' | 'tick';
 };

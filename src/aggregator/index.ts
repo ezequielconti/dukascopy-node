@@ -15,7 +15,8 @@ export function aggregate({
   priceType,
   ignoreFlats,
   startTs,
-  volumes
+  volumes,
+  volumeMode = 'size'
 }: AggregateInput): number[][] {
   if (fromTimeframe === Timeframe.tick && toTimeframe === Timeframe.tick) {
     // ignoring of flats is skipped for tick data
@@ -39,7 +40,7 @@ export function aggregate({
         const secondOHLC = getSecondOHLCfromTicks(data, priceType, startTs, volumes);
         return secondOHLC;
       } else {
-        const minuteOHLC = getMinuteOHLCfromTicks(data, priceType, startTs, volumes);
+        const minuteOHLC = getMinuteOHLCfromTicks(data, priceType, startTs, volumes, volumeMode);
 
         if (toTimeframe === Timeframe.m1) {
           return minuteOHLC;

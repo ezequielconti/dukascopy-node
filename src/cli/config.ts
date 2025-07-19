@@ -16,6 +16,7 @@ export interface CliConfig extends ConfigBase {
   fileName: string;
   dateFormat: string;
   timeZone: string;
+  tickVolume: boolean;
 }
 
 const now = 'now';
@@ -34,6 +35,7 @@ const commanderSchema = program
   .option('-p, --price-type <value>', 'Price type: (bid, ask)', Price.bid)
   .option('-utc, --utc-offset <value>', 'UTC offset in minutes', Number, 0)
   .option('-v, --volumes', 'Include volumes', false)
+  .option('--tick-volume', 'Use tick volume (tick count) instead of regular volume', false)
   .option(
     '-vu, --volume-units <value>',
     'Volume units (millions, thousands, units)',
@@ -101,7 +103,8 @@ export function getConfigFromCliArgs(argv: NodeJS.Process['argv']) {
     inline: options.inline,
     fileName: options.fileName,
     dateFormat: options.dateFormat,
-    timeZone: options.timeZone
+    timeZone: options.timeZone,
+    tickVolume: options.tickVolume
   };
 
   const cliSchema: InputSchema<CliConfig> = {
@@ -113,7 +116,8 @@ export function getConfigFromCliArgs(argv: NodeJS.Process['argv']) {
       inline: { type: 'boolean', required: false } as RuleBoolean,
       fileName: { type: 'string', required: false } as RuleString,
       dateFormat: { type: 'string', required: false } as RuleString,
-      timeZone: { type: 'string', required: false } as RuleString
+      timeZone: { type: 'string', required: false } as RuleString,
+      tickVolume: { type: 'boolean', required: false } as RuleBoolean
     }
   };
 
