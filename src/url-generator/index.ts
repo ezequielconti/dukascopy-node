@@ -43,7 +43,11 @@ function getConstructor(instrument: InstrumentType, priceType: PriceType, endDat
 
     let tempStartDate = getStartOfUtc(startDate, rangetype);
 
-    while (tempStartDate < endDate) {
+    // For hourly data (tick data), we need to include the hour that contains the end date
+    // For other ranges, we stop before the end date
+    const shouldIncludeEndHour = rangetype === 'hour';
+
+    while (tempStartDate < endDate || (shouldIncludeEndHour && tempStartDate <= endDate)) {
       dates.push(tempStartDate);
 
       tempStartDate = getStartOfUtc(tempStartDate, rangetype, 1);

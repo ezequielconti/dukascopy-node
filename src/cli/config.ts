@@ -68,12 +68,7 @@ const commanderSchema = program
   .option('-tv, --tick-volume', 'Use tick count instead of size-at-BBO', false);
 
 export function getConfigFromCliArgs(argv: NodeJS.Process['argv']) {
-  console.log('DEBUG: process.argv:', JSON.stringify(argv, null, 2));
   const options = commanderSchema.parse(argv).opts();
-
-  // Debug logging to see what options are parsed
-  console.log('DEBUG: Parsed options:', JSON.stringify(options, null, 2));
-  console.log('DEBUG: tickVolume value:', options.tickVolume);
 
   // Parse "now" date parameter and convert
   // it to current time.

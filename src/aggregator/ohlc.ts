@@ -151,7 +151,8 @@ function getMinuteOHLCfromTicks(
   volumes: boolean,
   volumeMode?: 'size' | 'tick'
 ): number[][] {
-  const ticksByMinute = breakdownByInterval(ticks, 60, d => d.getUTCMinutes());
+  // Use absolute minutes from start of day instead of minutes of the hour
+  const ticksByMinute = breakdownByInterval(ticks, 1440, d => d.getUTCHours() * 60 + d.getUTCMinutes());
   const ohlc = ticksByMinute.map((data, i) =>
     data.length > 0
       ? ticksToOHLC({ ticks: data, priceType, startTs: startTs + i * 1000 * 60, volumes, volumeMode })

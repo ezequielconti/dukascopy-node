@@ -207,13 +207,18 @@ export async function run(argv: NodeJS.Process['argv']) {
 
             // If we forced aggregation from tick, aggregate to the requested OHLC timeframe
             if (shouldForceAggregateFromTick) {
+              // Calculate the correct startTs for this batch
+              // Use the first tick's timestamp but round down to the nearest minute
+              const firstTickTs = processedBatch.length > 0 ? processedBatch[0][0] : +startDate;
+              const batchStartTs = Math.floor(firstTickTs / (1000 * 60)) * (1000 * 60);
+
               processedBatch = aggregate({
                 data: processedBatch,
                 fromTimeframe: 'tick',
                 toTimeframe: timeframe,
                 priceType,
                 ignoreFlats,
-                startTs: +startDate,
+                startTs: batchStartTs,
                 volumes,
                 volumeMode
               });
