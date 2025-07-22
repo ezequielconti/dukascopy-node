@@ -1,0 +1,1 @@
+npx ts-node src/cli/index.ts -i usatechidxusd -from 2015-01-01 -to 2025-12-31 -t m1 -f csv -v --tick-volume --file-name nasdaq-m1-201e
